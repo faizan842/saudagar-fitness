@@ -4,7 +4,7 @@ body { font-family: 'Inter', sans-serif; }
 
 .form-input {
     width: 100%;
-    background: #f8fafc; /* off-white */
+    background: #f8fafc;
     border: 2px solid #e2e8f0;
     padding: 1rem;
     border-radius: 1.25rem;
@@ -13,7 +13,7 @@ body { font-family: 'Inter', sans-serif; }
 }
 
 .form-input:focus {
-    border-color: #059669; /* emerald-600 */
+    border-color: #059669;
     background: #fff;
 }
 
@@ -25,10 +25,9 @@ body { font-family: 'Inter', sans-serif; }
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
-/* Custom Inputs */
 .nice-input {
     width: 100%;
-    background: #f0fdf4; /* Very light green */
+    background: #f0fdf4;
     border: 2px solid transparent;
     padding: 1rem;
     border-radius: 1.25rem;
@@ -44,19 +43,20 @@ body { font-family: 'Inter', sans-serif; }
     box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.1);
 }
 
-/* Plan Selection Cards */
 .plan-card {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 1rem;
+    padding: 0.85rem 0.5rem;
     background: #f8fafc;
     border: 2px solid #e2e8f0;
     border-radius: 1rem;
     cursor: pointer;
     font-weight: 800;
+    font-size: 0.7rem;
     color: #64748b;
     transition: all 0.2s;
+    text-align: center;
 }
 
 .plan-card:has(input:checked) {
@@ -67,7 +67,6 @@ body { font-family: 'Inter', sans-serif; }
     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
 }
 
-/* Smooth Scroll for Mobile */
 #memberModal div {
     scrollbar-width: none;
 }
@@ -81,7 +80,146 @@ body { font-family: 'Inter', sans-serif; }
     object-fit: cover;
 }
 
-/* Animation for the photo button */
 label[for="mPhoto"]:hover {
     background-color: #059669;
+}
+
+/* Gallery */
+.gallery-item {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: 1rem;
+    overflow: hidden;
+    border: 2px solid #d1fae5;
+    background: #ecfdf5;
+}
+
+.gallery-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(6, 78, 59, 0.85), transparent 60%);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    padding-bottom: 0.5rem;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.gallery-item:active .gallery-overlay,
+.gallery-item:hover .gallery-overlay {
+    opacity: 1;
+}
+
+/* Membership Card (matches reference design) */
+.card-render-offscreen {
+    position: fixed;
+    left: -9999px;
+    top: 0;
+    z-index: -1;
+}
+
+.membership-card {
+    width: 600px;
+    background: #fff;
+    font-family: 'Inter', Arial, sans-serif;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+}
+
+.mc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 24px 28px 12px;
+}
+
+.mc-brand h1 {
+    font-size: 28px;
+    font-weight: 900;
+    color: #111;
+    margin: 0 0 4px;
+    line-height: 1.1;
+}
+
+.mc-brand p {
+    font-size: 14px;
+    color: #333;
+    margin: 0;
+}
+
+.mc-gym-logo {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #ecfdf5;
+    border: 3px solid #10b981;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #059669;
+    font-size: 22px;
+    overflow: hidden;
+}
+
+.mc-wave {
+    height: 12px;
+    background: linear-gradient(90deg, #10b981, #34d399, #10b981);
+    clip-path: ellipse(55% 100% at 50% 100%);
+    margin: 0 20px;
+}
+
+.mc-body {
+    display: flex;
+    align-items: center;
+    padding: 20px 28px 28px;
+    position: relative;
+    min-height: 200px;
+}
+
+.mc-photo-wrap {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 4px solid #10b981;
+    flex-shrink: 0;
+    background: #f0fdf4;
+}
+
+.mc-photo-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.mc-details {
+    flex: 1;
+    padding: 0 20px 0 28px;
+    z-index: 2;
+}
+
+.mc-details p {
+    margin: 0 0 10px;
+    font-size: 17px;
+    color: #111;
+    line-height: 1.3;
+}
+
+.mc-details strong {
+    font-weight: 800;
+}
+
+.mc-curve {
+    position: absolute;
+    right: -40px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 180px;
+    height: 220px;
+    background: #10b981;
+    border-radius: 50% 0 0 50%;
+    z-index: 1;
 }

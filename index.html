@@ -62,28 +62,54 @@
 
         <div class="grid grid-cols-2 gap-4">
           <div class="bg-white/10 p-4 rounded-2xl backdrop-blur-md">
-            <p class="text-xs text-emerald-100">Monthly</p>
-            <h2 class="text-2xl font-black" id="monthlyTotal">₹0</h2>
+            <p class="text-xs text-emerald-100">Total Members</p>
+            <h2 class="text-2xl font-black" id="memberCount">0</h2>
           </div>
           <div class="bg-white/10 p-4 rounded-2xl backdrop-blur-md">
-            <p class="text-xs text-emerald-100">Yearly</p>
-            <h2 class="text-2xl font-black" id="yearlyTotal">₹0</h2>
+            <p class="text-xs text-emerald-100">Expiring Soon</p>
+            <h2 class="text-2xl font-black" id="expiringCount">0</h2>
           </div>
         </div>
       </header>
 
-      <main class="p-4">
-        <div class="flex justify-between items-center my-6">
-          <h2 class="text-lg font-bold text-emerald-900">Member Directory</h2>
-          <button
-            onclick="openModal()"
-            class="bg-emerald-600 text-white w-12 h-12 rounded-2xl shadow-lg flex items-center justify-center"
-          >
-            <i class="fas fa-plus"></i>
-          </button>
-        </div>
+      <nav class="flex mx-4 mt-4 bg-white rounded-2xl shadow-sm border border-emerald-100 p-1">
+        <button
+          id="tabMembers"
+          onclick="switchTab('members')"
+          class="tab-btn flex-1 py-3 rounded-xl font-bold text-sm bg-emerald-600 text-white"
+        >
+          <i class="fas fa-users mr-1"></i> Members
+        </button>
+        <button
+          id="tabGallery"
+          onclick="switchTab('gallery')"
+          class="tab-btn flex-1 py-3 rounded-xl font-bold text-sm text-emerald-700"
+        >
+          <i class="fas fa-images mr-1"></i> Gallery
+        </button>
+      </nav>
 
-        <div id="memberList" class="space-y-4"></div>
+      <main class="p-4">
+        <section id="membersSection">
+          <div class="flex justify-between items-center my-6">
+            <h2 class="text-lg font-bold text-emerald-900">Member Directory</h2>
+            <button
+              onclick="openModal()"
+              class="bg-emerald-600 text-white w-12 h-12 rounded-2xl shadow-lg flex items-center justify-center"
+            >
+              <i class="fas fa-plus"></i>
+            </button>
+          </div>
+          <div id="memberList" class="space-y-4"></div>
+        </section>
+
+        <section id="gallerySection" class="hidden">
+          <div class="my-6">
+            <h2 class="text-lg font-bold text-emerald-900">Member Gallery</h2>
+            <p class="text-xs text-slate-500 mt-1">Tap a photo to view membership card</p>
+          </div>
+          <div id="galleryGrid" class="grid grid-cols-3 gap-3"></div>
+        </section>
       </main>
     </div>
 
@@ -92,7 +118,7 @@
       class="fixed inset-0 bg-emerald-950/80 hidden z-[110] backdrop-blur-sm p-4 flex items-center justify-center"
     >
       <div
-        class="bg-white w-full max-w-lg rounded-[40px] shadow-2xl overflow-hidden border border-emerald-100"
+        class="bg-white w-full max-w-lg max-h-[92vh] rounded-[40px] shadow-2xl overflow-hidden border border-emerald-100 flex flex-col"
       >
         <div
           class="bg-emerald-600 p-6 text-white flex justify-between items-center"
@@ -101,7 +127,7 @@
           <i class="fas fa-user-plus text-2xl opacity-50"></i>
         </div>
 
-        <form id="gymForm" class="p-8 space-y-5">
+        <form id="gymForm" class="p-8 space-y-5 overflow-y-auto flex-1">
           <div class="flex flex-col items-center mb-6">
             <div class="relative group">
               <div
@@ -199,7 +225,7 @@
               class="text-[10px] uppercase tracking-widest font-black text-emerald-600 ml-2"
               >Choose Plan</label
             >
-            <div class="grid grid-cols-3 gap-2">
+            <div class="grid grid-cols-2 gap-2">
               <label class="plan-card">
                 <input
                   type="radio"
@@ -215,11 +241,26 @@
                 <span>3 Mo</span>
               </label>
               <label class="plan-card">
+                <input type="radio" name="plan" value="6" class="hidden" />
+                <span>6 Mo</span>
+              </label>
+              <label class="plan-card">
                 <input type="radio" name="plan" value="12" class="hidden" />
                 <span>1 Year</span>
               </label>
             </div>
           </div>
+
+          <label class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" id="mAdmission" class="w-5 h-5 accent-amber-600 rounded" />
+            <div class="w-10 h-10 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center shrink-0">
+              <i class="fas fa-receipt"></i>
+            </div>
+            <div class="flex-1">
+              <p class="text-xs font-black text-amber-800 uppercase tracking-wider">Admission Fee (Optional)</p>
+              <p class="text-lg font-black text-amber-900">₹200 <span class="text-xs font-bold text-amber-600">— tick if collected</span></p>
+            </div>
+          </label>
 
           <div class="flex gap-4 pt-4">
             <button
@@ -240,6 +281,33 @@
       </div>
     </div>
 
+    <div
+      id="cardModal"
+      class="fixed inset-0 bg-emerald-950/80 hidden z-[120] backdrop-blur-sm p-4 flex items-center justify-center"
+    >
+      <div class="bg-white w-full max-w-md rounded-[32px] shadow-2xl overflow-hidden">
+        <div class="bg-emerald-600 p-5 text-white flex justify-between items-center">
+          <h2 class="text-lg font-bold">Membership Card</h2>
+          <button onclick="closeCardModal()" class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="p-4">
+          <div id="cardPreviewArea" class="rounded-2xl overflow-hidden shadow-lg mb-4"></div>
+          <button
+            id="sendWhatsAppBtn"
+            onclick="shareCardOnWhatsApp()"
+            class="w-full py-4 bg-emerald-500 text-white rounded-2xl font-bold shadow-lg flex items-center justify-center gap-2"
+          >
+            <i class="fab fa-whatsapp text-xl"></i> Send on WhatsApp
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="cardRenderTarget" class="card-render-offscreen"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="script.js"></script>
   </body>
 </html>
