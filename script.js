@@ -13,7 +13,6 @@ const GYM_OWNER = "Faizan Saudagar";
 let members = [];
 let activeCardMember = null;
 let activeCardImageUrl = null;
-const cardCache = new Map();
 
 // ─── INIT ───────────────────────────────────────────────────────────
 window.onload = () => {
@@ -164,17 +163,10 @@ function loadImage(src) {
     });
 }
 
-function prewarmCardCache(member) {
-    if (cardCache.has(member.id)) return;
-    generateCardImage(member).catch(() => { });
-}
-
 // ─── CANVAS-BASED CARD GENERATION (fast, no html2canvas) ────────────
 // Uses native Canvas API — ~200ms vs 1-2 seconds with html2canvas
 
 async function generateCardImage(member) {
-    if (cardCache.has(member.id)) return cardCache.get(member.id);
-
     const t0 = performance.now();
     const W = 600, H = 320;
     const canvas = document.createElement('canvas');
@@ -305,7 +297,6 @@ async function generateCardImage(member) {
     ctx.strokeRect(0.5, 0.5, W - 1, H - 1);
 
     const url = canvas.toDataURL('image/jpeg', 0.92);
-    cardCache.set(member.id, url);
     console.log(`Card generated in ${Math.round(performance.now() - t0)}ms`);
     return url;
 }
@@ -335,7 +326,7 @@ async function sendWhatsAppWithCard(member) {
 
     try {
         // Generate card image
-        activeCardImageUrl = cardCache.get(member.id) || await generateCardImage(member);
+        activeCardImageUrl = await generateCardImage(member);
 
         // Copy card image to clipboard as PNG
         const pngBlob = await imageToPngBlob(activeCardImageUrl);
@@ -379,13 +370,6 @@ async function showMembershipCard(member) {
     activeCardMember = member;
     const preview = document.getElementById('cardPreviewArea');
     document.getElementById('cardModal').classList.remove('hidden');
-
-    const cached = cardCache.get(member.id);
-    if (cached) {
-        activeCardImageUrl = cached;
-        preview.innerHTML = `<img src="${cached}" class="w-full rounded-xl" alt="Membership Card">`;
-        return;
-    }
 
     preview.innerHTML = '<p class="text-center text-slate-400 py-8">Generating card...</p>';
     try {
@@ -440,7 +424,6 @@ async function saveMember(data) {
         document.getElementById('gymForm').reset();
         document.getElementById('photoPreview').innerHTML = `<i class="fas fa-camera text-3xl text-emerald-400"></i>`;
 
-        prewarmCardCache(data);
         showToast('✅ Member saved to cloud!');
         await showMembershipCard(data);
     } catch (error) {
@@ -449,7 +432,6 @@ async function saveMember(data) {
         updateStats();
         renderMembers();
         renderGallery();
-        prewarmCardCache(data);
         showToast("⚠️ Saved locally. Cloud sync failed — check internet.");
         await showMembershipCard(data);
     } finally {
@@ -605,7 +587,6 @@ async function deleteMember(id) {
 
     // Delete locally
     deletePhotoLocally(id);
-    cardCache.delete(id);
     members = members.filter(m => m.id !== id);
     updateStats();
     renderMembers();
