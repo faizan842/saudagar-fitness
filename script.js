@@ -5,6 +5,7 @@ const GYM_OWNER = "Faizan Saudagar";
 let members = [];
 let activeCardMember = null;
 let activeCardImageUrl = null;
+const cardCache = new Map();
 
 window.onload = () => {
     fetchMembersFromSheet();
@@ -87,9 +88,53 @@ function normalizePhone(phone) {
     return digits;
 }
 
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.remove('hidden');
+    clearTimeout(showToast._timer);
+    showToast._timer = setTimeout(() => t.classList.add('hidden'), 4000);
+}
+
 function openWhatsAppToNumber(phone, message) {
-    const url = `https://wa.me/${normalizePhone(phone)}?text=${encodeURIComponent(message)}`;
+    const p = normalizePhone(phone);
+    const url = `https://api.whatsapp.com/send?phone=${p}&text=${encodeURIComponent(message)}`;
     window.location.href = url;
+}
+
+function compressImage(src, maxPx = 280) {
+    return new Promise(resolve => {
+        if (!src?.startsWith('data:image')) return resolve(src);
+        const img = new Image();
+        img.onload = () => {
+            const scale = Math.min(maxPx / img.width, maxPx / img.height, 1);
+            const c = document.createElement('canvas');
+            c.width = Math.round(img.width * scale);
+            c.height = Math.round(img.height * scale);
+            c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+            resolve(c.toDataURL('image/jpeg', 0.82));
+        };
+        img.onerror = () => resolve(src);
+        img.src = src;
+    });
+}
+
+function waitForImages(container) {
+    const imgs = [...container.querySelectorAll('img')];
+    return Promise.all(imgs.map(img => {
+        if (img.complete) return Promise.resolve();
+        return new Promise(r => { img.onload = img.onerror = r; setTimeout(r, 400); });
+    }));
+}
+
+async function copyImageToClipboard(dataUrl) {
+    const blob = await (await fetch(dataUrl)).blob();
+    await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+}
+
+function prewarmCardCache(member) {
+    if (cardCache.has(member.id)) return;
+    generateCardImage(member).then(url => cardCache.set(member.id, url)).catch(() => {});
 }
 
 function buildMembershipCardHTML(member) {
@@ -123,84 +168,89 @@ function buildMembershipCardHTML(member) {
 }
 
 async function generateCardImage(member) {
-    const target = document.getElementById('cardRenderTarget');
-    target.innerHTML = buildMembershipCardHTML(member);
+    if (cardCache.has(member.id)) return cardCache.get(member.id);
 
-    await new Promise(r => setTimeout(r, 150));
+    const pic = await compressImage(member.profilePic);
+    const target = document.getElementById('cardRenderTarget');
+    target.innerHTML = buildMembershipCardHTML({ ...member, profilePic: pic });
+    await waitForImages(target);
+
     const card = document.getElementById('membershipCard');
     const canvas = await html2canvas(card, {
-        scale: 2,
+        scale: 1,
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#ffffff',
         logging: false
     });
-    return canvas.toDataURL('image/png');
+    const url = canvas.toDataURL('image/jpeg', 0.88);
+    cardCache.set(member.id, url);
+    return url;
 }
 
-async function uploadCardImage(dataUrl) {
-    const blob = await (await fetch(dataUrl)).blob();
-    const form = new FormData();
-    form.append('file', blob, 'gym-pass.png');
-    const res = await fetch('https://telegra.ph/upload', { method: 'POST', body: form });
-    const json = await res.json();
-    if (json[0]?.src) return 'https://telegra.ph' + json[0].src;
-    throw new Error('Image upload failed');
+async function getOrMakeCard(member) {
+    return cardCache.get(member.id) || await generateCardImage(member);
 }
 
 async function sendWhatsAppWithCard(member) {
-    const btn = document.getElementById('sendWhatsAppBtn');
-    const originalBtnText = btn?.innerHTML;
-    if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Preparing...';
+    activeCardMember = member;
+    const message = getWhatsAppMessage(member);
+    const cached = cardCache.get(member.id);
+
+    // Open WhatsApp to this member immediately — no waiting
+    openWhatsAppToNumber(member.phone, message);
+
+    if (cached) {
+        activeCardImageUrl = cached;
+        try {
+            await copyImageToClipboard(cached);
+            showToast('WhatsApp opened! Long-press chat → Paste to attach gym pass 📋');
+        } catch {
+            downloadCardImage(cached, member.name);
+            showToast('WhatsApp opened! Attach the downloaded gym pass image.');
+        }
+        return;
     }
 
+    showToast('Opening WhatsApp... preparing gym pass card');
     try {
-        activeCardMember = member;
         activeCardImageUrl = await generateCardImage(member);
-
-        const message = getWhatsAppMessage(member);
-        let fullMessage = message;
-
         try {
-            const imageLink = await uploadCardImage(activeCardImageUrl);
-            fullMessage = `${message}\n\n🎫 Gym Pass Card:\n${imageLink}`;
-        } catch (uploadErr) {
-            console.log('Image upload failed, sending text only...', uploadErr);
-            try {
-                const blob = await (await fetch(activeCardImageUrl)).blob();
-                await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-                fullMessage = `${message}\n\n(Card image copied — paste it in the chat after WhatsApp opens)`;
-            } catch (clipErr) {
-                const link = document.createElement('a');
-                link.href = activeCardImageUrl;
-                link.download = `gym-pass-${member.name.replace(/\s+/g, '-')}.png`;
-                link.click();
-                fullMessage = `${message}\n\n(Gym pass image downloaded — attach it in the chat)`;
-            }
+            await copyImageToClipboard(activeCardImageUrl);
+            showToast('Gym pass copied! Switch to WhatsApp → Paste in chat 📋');
+        } catch {
+            downloadCardImage(activeCardImageUrl, member.name);
+            showToast('Gym pass downloaded! Attach it in WhatsApp chat.');
         }
-
-        openWhatsAppToNumber(member.phone, fullMessage);
-        return true;
-    } finally {
-        if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = originalBtnText;
-        }
+    } catch (err) {
+        console.error(err);
+        showToast('Could not make card. Message sent on WhatsApp.');
     }
 }
 
-async function showMembershipCard(member, autoShare = false) {
+function downloadCardImage(dataUrl, name) {
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = `gym-pass-${name.replace(/\s+/g, '-')}.jpg`;
+    link.click();
+}
+
+async function showMembershipCard(member) {
     activeCardMember = member;
     const preview = document.getElementById('cardPreviewArea');
-    preview.innerHTML = '<p class="text-center text-slate-400 py-8">Generating card...</p>';
     document.getElementById('cardModal').classList.remove('hidden');
 
+    const cached = cardCache.get(member.id);
+    if (cached) {
+        activeCardImageUrl = cached;
+        preview.innerHTML = `<img src="${cached}" class="w-full rounded-xl" alt="Membership Card">`;
+        return;
+    }
+
+    preview.innerHTML = '<p class="text-center text-slate-400 py-8">Generating card...</p>';
     try {
         activeCardImageUrl = await generateCardImage(member);
         preview.innerHTML = `<img src="${activeCardImageUrl}" class="w-full rounded-xl" alt="Membership Card">`;
-        if (autoShare) await sendWhatsAppWithCard(member);
     } catch (err) {
         console.error(err);
         preview.innerHTML = '<p class="text-center text-red-500 py-8">Could not generate card. Try again.</p>';
@@ -211,10 +261,10 @@ function shareCardOnWhatsApp() {
     if (activeCardMember) sendWhatsAppWithCard(activeCardMember);
 }
 
-async function sendPassToMember(id) {
+function sendPassToMember(id) {
     const member = members.find(m => m.id === id);
     if (!member) return;
-    await sendWhatsAppWithCard(member);
+    sendWhatsAppWithCard(member);
 }
 
 async function saveMember(data) {
@@ -243,16 +293,18 @@ async function saveMember(data) {
         document.getElementById('photoPreview').innerHTML = `<i class="fas fa-camera text-3xl text-emerald-400"></i>`;
 
         const admissionNote = data.admissionFee ? `\nAdmission fee: ₹${data.admissionFee}` : '';
+        prewarmCardCache(data);
         alert(`✅ Member Saved!\nPlan: ${getPlanLabel(data.plan)}${admissionNote}`);
-        await showMembershipCard(data, false);
+        await showMembershipCard(data);
     } catch (error) {
         console.error("Error saving data:", error);
         members.push(data);
         updateStats();
         renderMembers();
         renderGallery();
+        prewarmCardCache(data);
         alert("⚠️ Connection Error. Saved on screen only.");
-        await showMembershipCard(data, false);
+        await showMembershipCard(data);
     } finally {
         saveBtn.innerText = originalText;
         saveBtn.disabled = false;
