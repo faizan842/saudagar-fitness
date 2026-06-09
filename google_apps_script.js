@@ -5,8 +5,8 @@
 // ║  1. Open Google Sheets → Create blank spreadsheet                  ║
 // ║  2. Name it "Saudagar Fitness Members"                             ║
 // ║  3. In Row 1, add headers:                                         ║
-// ║     id | membershipId | name | phone | weight | height |           ║
-// ║     joinDate | plan | admissionFee | expDate                       ║
+// ║     id | membershipId | profilePic | name | phone | weight |       ║
+// ║     height | joinDate | plan | admissionFee | expDate              ║
 // ║  4. Go to Extensions → Apps Script                                 ║
 // ║  5. Delete default code, paste THIS entire file                    ║
 // ║  6. Click Deploy → New deployment → Web app                       ║

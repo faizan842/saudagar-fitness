@@ -112,8 +112,8 @@ function showToast(msg) {
 
 function openWhatsAppToNumber(phone, message) {
     const p = normalizePhone(phone);
-    const url = `https://api.whatsapp.com/send?phone=${p}&text=${encodeURIComponent(message)}`;
-    window.location.href = url;
+    const url = `https://wa.me/${p}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
 }
 
 // ─── LOCAL PHOTO STORAGE (localStorage) ─────────────────────────────
@@ -375,23 +375,19 @@ async function saveMember(data) {
     saveBtn.disabled = true;
     saveBtn.style.opacity = "0.7";
 
-    // Save photo locally (photos are too large for Google Sheets)
+    // Compress photo for both local and cloud storage
     if (data.profilePic && data.profilePic.startsWith('data:')) {
-        const compressed = await compressImage(data.profilePic, 300);
+        const compressed = await compressImage(data.profilePic, 150);
         savePhotoLocally(data.id, compressed);
-        data.profilePic = compressed; // use compressed version in memory
+        data.profilePic = compressed;
     }
-
-    // Prepare cloud payload (WITHOUT profilePic)
-    const cloudData = { ...data };
-    delete cloudData.profilePic;
 
     try {
         await fetch(SCRIPT_URL, {
             method: "POST",
             mode: "no-cors",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(cloudData)
+            body: JSON.stringify(data)
         });
 
         members.push(data);
