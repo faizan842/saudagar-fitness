@@ -80,6 +80,18 @@ function getWhatsAppMessage(member) {
     return `Hi ${member.name} ! 🙌 Your gym pass is here! 🎉 You can use it to access Saudagar Fitness Club from ${start} to ${end}`;
 }
 
+function normalizePhone(phone) {
+    let digits = phone.replace(/\D/g, '');
+    if (digits.length === 10) digits = '91' + digits;
+    if (digits.startsWith('0') && digits.length === 11) digits = '91' + digits.slice(1);
+    return digits;
+}
+
+function openWhatsAppToNumber(phone, message) {
+    const url = `https://wa.me/${normalizePhone(phone)}?text=${encodeURIComponent(message)}`;
+    window.location.href = url;
+}
+
 function buildMembershipCardHTML(member) {
     return `
         <div class="membership-card" id="membershipCard">
@@ -126,12 +138,6 @@ async function generateCardImage(member) {
     return canvas.toDataURL('image/png');
 }
 
-async function dataUrlToFile(dataUrl, filename) {
-    const res = await fetch(dataUrl);
-    const blob = await res.blob();
-    return new File([blob], filename, { type: 'image/png' });
-}
-
 async function uploadCardImage(dataUrl) {
     const blob = await (await fetch(dataUrl)).blob();
     const form = new FormData();
@@ -154,46 +160,29 @@ async function sendWhatsAppWithCard(member) {
         activeCardMember = member;
         activeCardImageUrl = await generateCardImage(member);
 
-        const phone = member.phone.replace(/\D/g, '');
         const message = getWhatsAppMessage(member);
-        const file = await dataUrlToFile(activeCardImageUrl, `gym-pass-${member.name.replace(/\s+/g, '-')}.png`);
+        let fullMessage = message;
 
-        // Mobile: share image + message directly to WhatsApp
-        if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        try {
+            const imageLink = await uploadCardImage(activeCardImageUrl);
+            fullMessage = `${message}\n\n🎫 Gym Pass Card:\n${imageLink}`;
+        } catch (uploadErr) {
+            console.log('Image upload failed, sending text only...', uploadErr);
             try {
-                await navigator.share({ text: message, files: [file] });
-                return true;
-            } catch (e) {
-                if (e.name === 'AbortError') return false;
+                const blob = await (await fetch(activeCardImageUrl)).blob();
+                await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+                fullMessage = `${message}\n\n(Card image copied — paste it in the chat after WhatsApp opens)`;
+            } catch (clipErr) {
+                const link = document.createElement('a');
+                link.href = activeCardImageUrl;
+                link.download = `gym-pass-${member.name.replace(/\s+/g, '-')}.png`;
+                link.click();
+                fullMessage = `${message}\n\n(Gym pass image downloaded — attach it in the chat)`;
             }
         }
 
-        // Fallback: upload image, open WhatsApp with message + image link (shows preview in chat)
-        try {
-            const imageLink = await uploadCardImage(activeCardImageUrl);
-            const fullMessage = encodeURIComponent(`${message}\n\n🎫 Gym Pass Card:\n${imageLink}`);
-            window.open(`https://wa.me/${phone}?text=${fullMessage}`, '_blank');
-            return true;
-        } catch (uploadErr) {
-            console.log('Upload fallback failed, using clipboard...', uploadErr);
-        }
-
-        // Last resort: copy image to clipboard + open WhatsApp with text
-        try {
-            const blob = await (await fetch(activeCardImageUrl)).blob();
-            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-            window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
-            alert('Card image copied! In WhatsApp, long-press the chat box and tap Paste to attach the image.');
-            return true;
-        } catch (clipErr) {
-            const link = document.createElement('a');
-            link.href = activeCardImageUrl;
-            link.download = `gym-pass-${member.name.replace(/\s+/g, '-')}.png`;
-            link.click();
-            window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
-            alert('WhatsApp opened. Attach the downloaded gym pass image to your message.');
-            return true;
-        }
+        openWhatsAppToNumber(member.phone, fullMessage);
+        return true;
     } finally {
         if (btn) {
             btn.disabled = false;
@@ -225,7 +214,7 @@ function shareCardOnWhatsApp() {
 async function sendPassToMember(id) {
     const member = members.find(m => m.id === id);
     if (!member) return;
-    await showMembershipCard(member, true);
+    await sendWhatsAppWithCard(member);
 }
 
 async function saveMember(data) {
@@ -255,7 +244,7 @@ async function saveMember(data) {
 
         const admissionNote = data.admissionFee ? `\nAdmission fee: ₹${data.admissionFee}` : '';
         alert(`✅ Member Saved!\nPlan: ${getPlanLabel(data.plan)}${admissionNote}`);
-        await showMembershipCard(data, true);
+        await showMembershipCard(data, false);
     } catch (error) {
         console.error("Error saving data:", error);
         members.push(data);
@@ -263,7 +252,7 @@ async function saveMember(data) {
         renderMembers();
         renderGallery();
         alert("⚠️ Connection Error. Saved on screen only.");
-        await showMembershipCard(data, true);
+        await showMembershipCard(data, false);
     } finally {
         saveBtn.innerText = originalText;
         saveBtn.disabled = false;
