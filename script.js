@@ -313,15 +313,40 @@ async function generateCardImage(member) {
 // ─── WHATSAPP SHARING ───────────────────────────────────────────────
 async function sendWhatsAppWithCard(member) {
     activeCardMember = member;
+    showToast('Preparing gym pass card...');
 
-    // Generate card in background for card preview
-    if (!cardCache.has(member.id)) {
-        generateCardImage(member).catch(() => { });
+    try {
+        // Generate card image
+        activeCardImageUrl = cardCache.get(member.id) || await generateCardImage(member);
+
+        // Copy card image to clipboard as PNG
+        const pngBlob = await imageToPngBlob(activeCardImageUrl);
+        await navigator.clipboard.write([
+            new ClipboardItem({ 'image/png': pngBlob })
+        ]);
+
+        showToast('✅ Card copied! Paste it in WhatsApp chat');
+
+        // Open WhatsApp directly to member's number
+        setTimeout(() => {
+            openWhatsAppToNumber(member.phone, getWhatsAppMessage(member));
+        }, 600);
+    } catch (err) {
+        console.error('Clipboard copy failed:', err);
+        // Fallback: just open WhatsApp with text message
+        openWhatsAppToNumber(member.phone, getWhatsAppMessage(member));
+        showToast('Card not copied. Long press message box to paste.');
     }
+}
 
-    // Open WhatsApp directly to this member's number
-    const message = getWhatsAppMessage(member);
-    openWhatsAppToNumber(member.phone, message);
+// Convert any image data URL to PNG Blob (clipboard requires PNG)
+async function imageToPngBlob(dataUrl) {
+    const img = await loadImage(dataUrl);
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    canvas.getContext('2d').drawImage(img, 0, 0);
+    return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
 }
 
 function downloadCardImage(dataUrl, memberName) {
