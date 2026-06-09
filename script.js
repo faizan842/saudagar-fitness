@@ -319,25 +319,16 @@ async function sendWhatsAppWithCard(member) {
         activeCardImageUrl = cardCache.get(member.id) || await generateCardImage(member);
         const message = getWhatsAppMessage(member);
 
-        // Convert data URL to a File object for sharing
-        const blob = await (await fetch(activeCardImageUrl)).blob();
-        const file = new File([blob], `${member.name.replace(/\s+/g, '_')}_GymPass.jpg`, { type: 'image/jpeg' });
+        // Step 1: Save card image to device
+        downloadCardImage(activeCardImageUrl, member.name);
 
-        // Use Web Share API to send actual image + text to WhatsApp
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({ text: message, files: [file] });
-            showToast('Card shared successfully! ✅');
-        } else {
-            // Fallback: download the card image, then open WhatsApp with text
-            downloadCardImage(activeCardImageUrl, member.name);
-            showToast('Card saved to your device! Attach it in WhatsApp 📎');
-            setTimeout(() => openWhatsAppToNumber(member.phone, message), 1500);
-        }
+        // Step 2: Open WhatsApp directly to member's number with message
+        showToast('Card saved! Tap 📎 in WhatsApp to attach it');
+        setTimeout(() => openWhatsAppToNumber(member.phone, message), 1200);
     } catch (err) {
-        if (err.name === 'AbortError') { showToast('Share cancelled.'); return; }
         console.error(err);
         openWhatsAppToNumber(member.phone, getWhatsAppMessage(member));
-        showToast('Could not share card image. Text message opened.');
+        showToast('Could not save card. Text message opened.');
     }
 }
 
