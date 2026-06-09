@@ -313,23 +313,15 @@ async function generateCardImage(member) {
 // ─── WHATSAPP SHARING ───────────────────────────────────────────────
 async function sendWhatsAppWithCard(member) {
     activeCardMember = member;
-    showToast('Preparing gym pass card...');
 
-    try {
-        activeCardImageUrl = cardCache.get(member.id) || await generateCardImage(member);
-        const message = getWhatsAppMessage(member);
-
-        // Step 1: Save card image to device
-        downloadCardImage(activeCardImageUrl, member.name);
-
-        // Step 2: Open WhatsApp directly to member's number with message
-        showToast('Card saved! Tap 📎 in WhatsApp to attach it');
-        setTimeout(() => openWhatsAppToNumber(member.phone, message), 1200);
-    } catch (err) {
-        console.error(err);
-        openWhatsAppToNumber(member.phone, getWhatsAppMessage(member));
-        showToast('Could not save card. Text message opened.');
+    // Generate card in background for card preview
+    if (!cardCache.has(member.id)) {
+        generateCardImage(member).catch(() => { });
     }
+
+    // Open WhatsApp directly to this member's number
+    const message = getWhatsAppMessage(member);
+    openWhatsAppToNumber(member.phone, message);
 }
 
 function downloadCardImage(dataUrl, memberName) {
