@@ -1,17 +1,26 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlUv97inWJyk7VxjlLfW3OW4-S3LKQQEfwrPqwqSA-QEE6rNM9d0YKdAWtBnGm_o8/exec";
+// ╔════════════════════════════════════════════════════════════════════╗
+// ║  SAUDAGAR FITNESS CLUB — Main Application Script                  ║
+// ╚════════════════════════════════════════════════════════════════════╝
+
+// ─── CONFIGURATION ──────────────────────────────────────────────────
+// ⚠️ REPLACE THIS with YOUR Google Apps Script Web App URL:
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzIwc66OCmtZd6WHs6ZKRY_LuEmlmklCMIbG4iXwZWvAiteD-jlZbn1fqHQNv9-YSEQfQ/exec";
 const ADMISSION_FEE = 200;
 const GYM_PHONE = "+91-8888946574";
 const GYM_OWNER = "Faizan Saudagar";
+
+// ─── STATE ──────────────────────────────────────────────────────────
 let members = [];
 let activeCardMember = null;
 let activeCardImageUrl = null;
 const cardCache = new Map();
-const imageUrlCache = new Map();
 
+// ─── INIT ───────────────────────────────────────────────────────────
 window.onload = () => {
     fetchMembersFromSheet();
 };
 
+// ─── AUTH ────────────────────────────────────────────────────────────
 function handleLogin() {
     const pin = document.getElementById('pinInput').value;
     if (pin === "1234") {
@@ -28,10 +37,12 @@ function handleLogout() {
     document.getElementById('pinInput').value = "";
 }
 
+// ─── MODALS ─────────────────────────────────────────────────────────
 function openModal() { document.getElementById('memberModal').classList.remove('hidden'); }
 function closeModal() { document.getElementById('memberModal').classList.add('hidden'); }
 function closeCardModal() { document.getElementById('cardModal').classList.add('hidden'); }
 
+// ─── TABS ───────────────────────────────────────────────────────────
 function switchTab(tab) {
     const isMembers = tab === 'members';
     document.getElementById('membersSection').classList.toggle('hidden', !isMembers);
@@ -41,18 +52,20 @@ function switchTab(tab) {
     if (!isMembers) renderGallery();
 }
 
-document.getElementById('mPhoto').addEventListener('change', function(e) {
+// ─── PHOTO PREVIEW ──────────────────────────────────────────────────
+document.getElementById('mPhoto').addEventListener('change', function (e) {
     const file = e.target.files[0];
     const preview = document.getElementById('photoPreview');
     if (file) {
         const reader = new FileReader();
-        reader.onload = function(event) {
+        reader.onload = function (event) {
             preview.innerHTML = `<img src="${event.target.result}" class="w-full h-full object-cover">`;
         };
         reader.readAsDataURL(file);
     }
 });
 
+// ─── HELPERS ────────────────────────────────────────────────────────
 function getPlanLabel(plan) {
     const labels = { "1": "1 month", "3": "3 month", "6": "6 month", "12": "1 year" };
     return labels[plan] || `${plan} month`;
@@ -83,7 +96,7 @@ function getWhatsAppMessage(member) {
 }
 
 function normalizePhone(phone) {
-    let digits = phone.replace(/\D/g, '');
+    let digits = String(phone).replace(/\D/g, '');
     if (digits.length === 10) digits = '91' + digits;
     if (digits.startsWith('0') && digits.length === 11) digits = '91' + digits.slice(1);
     return digits;
@@ -103,6 +116,26 @@ function openWhatsAppToNumber(phone, message) {
     window.location.href = url;
 }
 
+// ─── LOCAL PHOTO STORAGE (localStorage) ─────────────────────────────
+// Photos are stored on your device only — too large for Google Sheets.
+
+function savePhotoLocally(id, dataUrl) {
+    try {
+        localStorage.setItem(`gym_photo_${id}`, dataUrl);
+    } catch (e) {
+        console.warn('Photo save failed (storage full?):', e);
+    }
+}
+
+function loadPhotoLocally(id) {
+    return localStorage.getItem(`gym_photo_${id}`) || '';
+}
+
+function deletePhotoLocally(id) {
+    localStorage.removeItem(`gym_photo_${id}`);
+}
+
+// ─── IMAGE UTILITIES ────────────────────────────────────────────────
 function compressImage(src, maxPx = 280) {
     return new Promise(resolve => {
         if (!src?.startsWith('data:image')) return resolve(src);
@@ -120,130 +153,204 @@ function compressImage(src, maxPx = 280) {
     });
 }
 
-function waitForImages(container) {
-    const imgs = [...container.querySelectorAll('img')];
-    return Promise.all(imgs.map(img => {
-        if (img.complete) return Promise.resolve();
-        return new Promise(r => { img.onload = img.onerror = r; setTimeout(r, 400); });
-    }));
+function loadImage(src) {
+    return new Promise((resolve, reject) => {
+        if (!src) return reject(new Error('No image source'));
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('Image load failed'));
+        img.src = src;
+    });
 }
 
 function prewarmCardCache(member) {
-    if (cardCache.has(member.id) && imageUrlCache.has(member.id)) return;
-    generateCardImage(member)
-        .then(url => uploadCardImage(url).then(publicUrl => imageUrlCache.set(member.id, publicUrl)))
-        .catch(() => {});
+    if (cardCache.has(member.id)) return;
+    generateCardImage(member).catch(() => { });
 }
 
-async function uploadCardImage(dataUrl) {
-    const blob = await (await fetch(dataUrl)).blob();
-
-    // Catbox litterbox (fast, direct image link)
-    try {
-        const form = new FormData();
-        form.append('reqtype', 'fileupload');
-        form.append('time', '72h');
-        form.append('fileToUpload', blob, 'gym-pass.jpg');
-        const res = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', { method: 'POST', body: form });
-        const url = (await res.text()).trim();
-        if (url.startsWith('http')) return url;
-    } catch (e) { console.log('litterbox failed', e); }
-
-    // tmpfiles.org fallback
-    try {
-        const form = new FormData();
-        form.append('file', blob, 'gym-pass.jpg');
-        const res = await fetch('https://tmpfiles.org/api/v1/upload', { method: 'POST', body: form });
-        const json = await res.json();
-        if (json.status === 'success' && json.data?.url) {
-            return json.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
-        }
-    } catch (e) { console.log('tmpfiles failed', e); }
-
-    // telegra.ph fallback
-    const form = new FormData();
-    form.append('file', blob, 'gym-pass.jpg');
-    const res = await fetch('https://telegra.ph/upload', { method: 'POST', body: form });
-    const json = await res.json();
-    if (json[0]?.src) return 'https://telegra.ph' + json[0].src;
-
-    throw new Error('Image upload failed');
-}
-
-function buildMembershipCardHTML(member) {
-    return `
-        <div class="membership-card" id="membershipCard">
-            <div class="mc-header">
-                <div class="mc-brand">
-                    <h1>Saudagar Fitness Club</h1>
-                    <p>${GYM_PHONE} (${GYM_OWNER})</p>
-                </div>
-                <div class="mc-gym-logo">
-                    <i class="fas fa-dumbbell"></i>
-                </div>
-            </div>
-            <div class="mc-wave"></div>
-            <div class="mc-body">
-                <div class="mc-photo-wrap">
-                    <img src="${member.profilePic}" alt="${member.name}" crossorigin="anonymous">
-                </div>
-                <div class="mc-details">
-                    <p><strong>Name:</strong> ${member.name}</p>
-                    <p><strong>Membership Id:</strong> ${member.membershipId}</p>
-                    <p><strong>Plan Name:</strong> ${getPlanLabel(member.plan)}</p>
-                    <p><strong>Start Date:</strong> ${formatDisplayDate(member.joinDate)}</p>
-                    <p><strong>End Date:</strong> ${formatDisplayDate(member.expDate)}</p>
-                </div>
-                <div class="mc-curve"></div>
-            </div>
-        </div>
-    `;
-}
+// ─── CANVAS-BASED CARD GENERATION (fast, no html2canvas) ────────────
+// Uses native Canvas API — ~200ms vs 1-2 seconds with html2canvas
 
 async function generateCardImage(member) {
     if (cardCache.has(member.id)) return cardCache.get(member.id);
 
-    const pic = await compressImage(member.profilePic);
-    const target = document.getElementById('cardRenderTarget');
-    target.innerHTML = buildMembershipCardHTML({ ...member, profilePic: pic });
-    await waitForImages(target);
+    const t0 = performance.now();
+    const W = 600, H = 320;
+    const canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d');
 
-    const card = document.getElementById('membershipCard');
-    const canvas = await html2canvas(card, {
-        scale: 1,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        logging: false
+    // ── White background ──
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, H);
+
+    // ── Green decorative curve (right side) ──
+    ctx.beginPath();
+    ctx.arc(W + 30, H / 2 + 30, 140, 0, Math.PI * 2);
+    ctx.fillStyle = '#10b981';
+    ctx.fill();
+
+    // ── Header: Gym name ──
+    ctx.fillStyle = '#111111';
+    ctx.font = '900 28px Inter, Arial, sans-serif';
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'left';
+    ctx.fillText('Saudagar Fitness Club', 28, 22);
+
+    // ── Header: Phone / Owner ──
+    ctx.fillStyle = '#555555';
+    ctx.font = '400 14px Inter, Arial, sans-serif';
+    ctx.fillText(`${GYM_PHONE} (${GYM_OWNER})`, 28, 56);
+
+    // ── Logo circle (top-right) ──
+    const logoX = W - 60, logoY = 42;
+    ctx.beginPath();
+    ctx.arc(logoX, logoY, 26, 0, Math.PI * 2);
+    ctx.fillStyle = '#ecfdf5';
+    ctx.fill();
+    ctx.strokeStyle = '#10b981';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.fillStyle = '#059669';
+    ctx.font = '900 16px Inter, Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('SF', logoX, logoY);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+
+    // ── Green wave bar ──
+    const waveY = 82;
+    const grad = ctx.createLinearGradient(20, waveY, W - 20, waveY);
+    grad.addColorStop(0, '#10b981');
+    grad.addColorStop(0.5, '#34d399');
+    grad.addColorStop(1, '#10b981');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.ellipse(W / 2, waveY + 12, (W - 40) * 0.55, 12, 0, Math.PI, 0);
+    ctx.fill();
+
+    // ── Member photo (circular) ──
+    const photoX = 100, photoY = 200, photoR = 68;
+
+    // Green border
+    ctx.beginPath();
+    ctx.arc(photoX, photoY, photoR + 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#10b981';
+    ctx.fill();
+
+    // Background fill
+    ctx.beginPath();
+    ctx.arc(photoX, photoY, photoR, 0, Math.PI * 2);
+    ctx.fillStyle = '#f0fdf4';
+    ctx.fill();
+
+    // Draw member photo (with object-fit: cover)
+    try {
+        const pic = member.profilePic || loadPhotoLocally(member.id);
+        if (pic) {
+            const img = await loadImage(pic);
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(photoX, photoY, photoR, 0, Math.PI * 2);
+            ctx.clip();
+            const ratio = img.width / img.height;
+            let dw, dh;
+            if (ratio > 1) { dh = photoR * 2; dw = dh * ratio; }
+            else { dw = photoR * 2; dh = dw / ratio; }
+            ctx.drawImage(img, photoX - dw / 2, photoY - dh / 2, dw, dh);
+            ctx.restore();
+        }
+    } catch (e) {
+        // Placeholder icon
+        ctx.fillStyle = '#059669';
+        ctx.font = '36px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('👤', photoX, photoY);
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+    }
+
+    // ── Member details text ──
+    const detailX = 198;
+    let detailY = 118;
+    const lineH = 33;
+
+    const details = [
+        ['Name: ', member.name || ''],
+        ['Membership Id: ', String(member.membershipId || '')],
+        ['Plan Name: ', getPlanLabel(member.plan)],
+        ['Start Date: ', formatDisplayDate(member.joinDate)],
+        ['End Date: ', formatDisplayDate(member.expDate)]
+    ];
+
+    details.forEach(([label, value]) => {
+        ctx.fillStyle = '#111111';
+        ctx.font = '800 15px Inter, Arial, sans-serif';
+        ctx.textBaseline = 'top';
+        ctx.textAlign = 'left';
+        const lw = ctx.measureText(label).width;
+        ctx.fillText(label, detailX, detailY);
+        ctx.font = '400 15px Inter, Arial, sans-serif';
+        ctx.fillText(value, detailX + lw, detailY);
+        detailY += lineH;
     });
-    const url = canvas.toDataURL('image/jpeg', 0.88);
+
+    // ── Thin border ──
+    ctx.strokeStyle = '#e5e7eb';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(0.5, 0.5, W - 1, H - 1);
+
+    const url = canvas.toDataURL('image/jpeg', 0.92);
     cardCache.set(member.id, url);
+    console.log(`Card generated in ${Math.round(performance.now() - t0)}ms`);
     return url;
 }
 
+// ─── WHATSAPP SHARING ───────────────────────────────────────────────
 async function sendWhatsAppWithCard(member) {
     activeCardMember = member;
     showToast('Preparing gym pass card...');
 
     try {
         activeCardImageUrl = cardCache.get(member.id) || await generateCardImage(member);
+        const message = getWhatsAppMessage(member);
 
-        let publicImageUrl = imageUrlCache.get(member.id);
-        if (!publicImageUrl) {
-            publicImageUrl = await uploadCardImage(activeCardImageUrl);
-            imageUrlCache.set(member.id, publicImageUrl);
+        // Convert data URL to a File object for sharing
+        const blob = await (await fetch(activeCardImageUrl)).blob();
+        const file = new File([blob], `${member.name.replace(/\s+/g, '_')}_GymPass.jpg`, { type: 'image/jpeg' });
+
+        // Use Web Share API to send actual image + text to WhatsApp
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({ text: message, files: [file] });
+            showToast('Card shared successfully! ✅');
+        } else {
+            // Fallback: download the card image, then open WhatsApp with text
+            downloadCardImage(activeCardImageUrl, member.name);
+            showToast('Card saved to your device! Attach it in WhatsApp 📎');
+            setTimeout(() => openWhatsAppToNumber(member.phone, message), 1500);
         }
-
-        const message = `${getWhatsAppMessage(member)}\n\n🎫 Gym Pass Card:\n${publicImageUrl}`;
-        openWhatsAppToNumber(member.phone, message);
-        showToast('WhatsApp opened! Tap Send — card image is in the message ✅');
     } catch (err) {
+        if (err.name === 'AbortError') { showToast('Share cancelled.'); return; }
         console.error(err);
         openWhatsAppToNumber(member.phone, getWhatsAppMessage(member));
-        showToast('Card upload failed. Message sent — try WhatsApp again in a moment.');
+        showToast('Could not share card image. Text message opened.');
     }
 }
 
+function downloadCardImage(dataUrl, memberName) {
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = `${memberName.replace(/\s+/g, '_')}_GymPass.jpg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
+// ─── CARD PREVIEW MODAL ─────────────────────────────────────────────
 async function showMembershipCard(member) {
     activeCardMember = member;
     const preview = document.getElementById('cardPreviewArea');
@@ -276,20 +383,32 @@ function sendPassToMember(id) {
     sendWhatsAppWithCard(member);
 }
 
+// ─── CLOUD SAVE ─────────────────────────────────────────────────────
 async function saveMember(data) {
     const saveBtn = document.querySelector('button[type="submit"]');
     const originalText = saveBtn.innerText;
 
-    saveBtn.innerText = "Saving to Cloud...";
+    saveBtn.innerText = "Saving...";
     saveBtn.disabled = true;
     saveBtn.style.opacity = "0.7";
+
+    // Save photo locally (photos are too large for Google Sheets)
+    if (data.profilePic && data.profilePic.startsWith('data:')) {
+        const compressed = await compressImage(data.profilePic, 300);
+        savePhotoLocally(data.id, compressed);
+        data.profilePic = compressed; // use compressed version in memory
+    }
+
+    // Prepare cloud payload (WITHOUT profilePic)
+    const cloudData = { ...data };
+    delete cloudData.profilePic;
 
     try {
         await fetch(SCRIPT_URL, {
             method: "POST",
             mode: "no-cors",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(data)
+            body: JSON.stringify(cloudData)
         });
 
         members.push(data);
@@ -301,18 +420,17 @@ async function saveMember(data) {
         document.getElementById('gymForm').reset();
         document.getElementById('photoPreview').innerHTML = `<i class="fas fa-camera text-3xl text-emerald-400"></i>`;
 
-        const admissionNote = data.admissionFee ? `\nAdmission fee: ₹${data.admissionFee}` : '';
         prewarmCardCache(data);
-        alert(`✅ Member Saved!\nPlan: ${getPlanLabel(data.plan)}${admissionNote}`);
+        showToast('✅ Member saved to cloud!');
         await showMembershipCard(data);
     } catch (error) {
-        console.error("Error saving data:", error);
+        console.error("Cloud save error:", error);
         members.push(data);
         updateStats();
         renderMembers();
         renderGallery();
         prewarmCardCache(data);
-        alert("⚠️ Connection Error. Saved on screen only.");
+        showToast("⚠️ Saved locally. Cloud sync failed — check internet.");
         await showMembershipCard(data);
     } finally {
         saveBtn.innerText = originalText;
@@ -321,19 +439,32 @@ async function saveMember(data) {
     }
 }
 
+// ─── CLOUD FETCH ────────────────────────────────────────────────────
 async function fetchMembersFromSheet() {
+    showToast('Loading members from cloud...');
     try {
         const response = await fetch(SCRIPT_URL);
         const data = await response.json();
-        members = data;
+        // Reattach locally-stored photos to cloud data
+        members = data.map(m => ({
+            ...m,
+            profilePic: loadPhotoLocally(m.id) || m.profilePic || ''
+        }));
         updateStats();
         renderMembers();
         renderGallery();
+        if (members.length > 0) {
+            showToast(`✅ Loaded ${members.length} members from cloud`);
+        } else {
+            showToast('Ready! Add your first member.');
+        }
     } catch (e) {
-        console.log("Initial fetch failed. Add your first member!");
+        console.log("Fetch failed:", e);
+        showToast("⚠️ Could not load from cloud. Check internet or SCRIPT_URL.");
     }
 }
 
+// ─── STATS ──────────────────────────────────────────────────────────
 function updateStats() {
     const today = new Date();
     const expiringSoon = members.filter(m => {
@@ -345,11 +476,12 @@ function updateStats() {
     document.getElementById('expiringCount').innerText = expiringSoon;
 }
 
-document.getElementById('gymForm').addEventListener('submit', function(e) {
+// ─── FORM SUBMIT ────────────────────────────────────────────────────
+document.getElementById('gymForm').addEventListener('submit', function (e) {
     e.preventDefault();
 
     const photoElement = document.querySelector('#photoPreview img');
-    const photoSrc = photoElement ? photoElement.src : 'https://via.placeholder.com/200';
+    const photoSrc = photoElement ? photoElement.src : '';
 
     const memberData = {
         id: Date.now(),
@@ -368,6 +500,7 @@ document.getElementById('gymForm').addEventListener('submit', function(e) {
     saveMember(memberData);
 });
 
+// ─── MEMBER LIST RENDER ─────────────────────────────────────────────
 function renderMembers() {
     const container = document.getElementById('memberList');
     container.innerHTML = '';
@@ -379,10 +512,11 @@ function renderMembers() {
         const isWarning = diffDays <= 15 && diffDays > 0;
         const mid = m.membershipId || '-';
         const planLabel = getPlanLabel(m.plan);
+        const photoSrc = m.profilePic || loadPhotoLocally(m.id) || 'https://via.placeholder.com/200?text=No+Photo';
         container.innerHTML += `
             <div class="bg-white p-4 rounded-[2rem] shadow-sm border ${isWarning ? 'border-red-200 bg-red-50/30' : 'border-emerald-50'} flex items-center gap-4 animate-in">
                 <div class="w-16 h-16 rounded-full overflow-hidden border-2 ${isWarning ? 'border-red-500' : 'border-emerald-500'} shadow-sm bg-emerald-100">
-                    <img src="${m.profilePic}" class="w-full h-full object-cover">
+                    <img src="${photoSrc}" class="w-full h-full object-cover">
                 </div>
                 <div class="flex-1">
                     <h3 class="font-bold text-emerald-900 leading-tight">${m.name}</h3>
@@ -408,6 +542,7 @@ function renderMembers() {
     });
 }
 
+// ─── GALLERY RENDER ─────────────────────────────────────────────────
 function renderGallery() {
     const grid = document.getElementById('galleryGrid');
     if (!grid) return;
@@ -419,9 +554,10 @@ function renderGallery() {
     }
 
     members.forEach(m => {
+        const photoSrc = m.profilePic || loadPhotoLocally(m.id) || 'https://via.placeholder.com/200?text=No+Photo';
         grid.innerHTML += `
             <button onclick="showMembershipCard(members.find(x => x.id === ${m.id}))" class="gallery-item group">
-                <img src="${m.profilePic}" alt="${m.name}" class="w-full h-full object-cover">
+                <img src="${photoSrc}" alt="${m.name}" class="w-full h-full object-cover">
                 <div class="gallery-overlay">
                     <p class="text-white text-[10px] font-bold truncate px-1">${m.name}</p>
                     <i class="fas fa-id-card text-white text-xs"></i>
@@ -431,11 +567,28 @@ function renderGallery() {
     });
 }
 
-function deleteMember(id) {
-    if (confirm("Are you sure you want to remove this member?")) {
-        members = members.filter(m => m.id !== id);
-        updateStats();
-        renderMembers();
-        renderGallery();
+// ─── DELETE MEMBER ──────────────────────────────────────────────────
+async function deleteMember(id) {
+    if (!confirm("Are you sure you want to remove this member?")) return;
+
+    // Delete from cloud
+    try {
+        await fetch(SCRIPT_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: 'delete', id: id })
+        });
+    } catch (e) {
+        console.warn('Cloud delete failed:', e);
     }
+
+    // Delete locally
+    deletePhotoLocally(id);
+    cardCache.delete(id);
+    members = members.filter(m => m.id !== id);
+    updateStats();
+    renderMembers();
+    renderGallery();
+    showToast('Member removed ✅');
 }
