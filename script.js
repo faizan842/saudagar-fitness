@@ -311,6 +311,24 @@ async function generateCardImage(member) {
 }
 
 // ─── WHATSAPP SHARING ───────────────────────────────────────────────
+function openWhatsAppInstructionModal(member) {
+    const modal = document.getElementById('whatsappInstructionModal');
+    const directBtn = document.getElementById('whatsappDirectLink');
+    
+    // Set up click handler on the button to open WhatsApp synchronously (prevents popup blockers)
+    directBtn.onclick = () => {
+        openWhatsAppToNumber(member.phone, getWhatsAppMessage(member));
+        closeWhatsAppInstructionModal();
+        closeCardModal(); // Close membership card modal if open
+    };
+
+    modal.classList.remove('hidden');
+}
+
+function closeWhatsAppInstructionModal() {
+    document.getElementById('whatsappInstructionModal').classList.add('hidden');
+}
+
 async function sendWhatsAppWithCard(member) {
     activeCardMember = member;
     showToast('Preparing gym pass card...');
@@ -325,17 +343,15 @@ async function sendWhatsAppWithCard(member) {
             new ClipboardItem({ 'image/png': pngBlob })
         ]);
 
-        showToast('✅ Card copied! Paste it in WhatsApp chat');
+        showToast('✅ Card copied! Opening steps...');
 
-        // Open WhatsApp directly to member's number
-        setTimeout(() => {
-            openWhatsAppToNumber(member.phone, getWhatsAppMessage(member));
-        }, 600);
+        // Open instructions modal instead of auto-opening
+        openWhatsAppInstructionModal(member);
     } catch (err) {
         console.error('Clipboard copy failed:', err);
-        // Fallback: just open WhatsApp with text message
-        openWhatsAppToNumber(member.phone, getWhatsAppMessage(member));
-        showToast('Card not copied. Long press message box to paste.');
+        showToast('⚠️ Could not copy card. Opening WhatsApp steps...');
+        // Even if copy fails, show the modal so they can proceed
+        openWhatsAppInstructionModal(member);
     }
 }
 
