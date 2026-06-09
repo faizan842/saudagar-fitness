@@ -1,4 +1,4 @@
-import { SCRIPT_URL } from './config.js';
+import { SCRIPT_URL, IMGBB_API_KEY } from './config.js';
 import { state } from './state.js';
 import { loadPhotoLocally, savePhotoLocally, deletePhotoLocally } from './storage.js';
 import { updateStats, renderMembers, renderGallery, showToast, closeModal, showMembershipCard } from './ui.js';
@@ -37,8 +37,30 @@ export async function saveMember(data) {
 
     if (data.profilePic && data.profilePic.startsWith('data:')) {
         const compressed = await compressImage(data.profilePic, 150);
-        savePhotoLocally(data.id, compressed);
-        data.profilePic = compressed;
+        savePhotoLocally(data.id, compressed); // Keep local backup
+
+        try {
+            showToast("Uploading photo to cloud...");
+            const base64Data = compressed.split(',')[1];
+            const formData = new FormData();
+            formData.append('image', base64Data);
+
+            const imgResponse = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const imgResult = await imgResponse.json();
+            if (imgResult.success) {
+                data.profilePic = imgResult.data.url;
+            } else {
+                console.warn("ImgBB upload failed, falling back to local storage", imgResult);
+                data.profilePic = ''; // Don't send huge base64 to google sheets
+            }
+        } catch (imgErr) {
+            console.error("ImgBB error:", imgErr);
+            data.profilePic = ''; // Don't send huge base64 to google sheets
+        }
     }
 
     try {
