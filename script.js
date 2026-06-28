@@ -117,6 +117,7 @@ async function saveMember(data) {
         saveToLocalStorage(); // Backup to localStorage
         updateCollections(data.plan, data.admissionFee);
         renderMembers();
+        updateStats();
         
         alert("✅ Member Saved in Saudagar Fitness Club!");
         closeModal();
@@ -130,6 +131,7 @@ async function saveMember(data) {
         saveToLocalStorage();
         updateCollections(data.plan, data.admissionFee);
         renderMembers();
+        updateStats();
         alert("⚠️ Cloud sync failed, but member saved locally!");
         closeModal();
         document.getElementById('gymForm').reset();
@@ -151,6 +153,7 @@ async function fetchMembersFromSheet() {
         members = data;
         saveToLocalStorage(); // Cache the cloud data locally
         renderMembers();
+        updateStats();
         // Recalculate totals
         members.forEach(m => updateCollections(m.plan, m.admissionFee));
         console.log("✅ Loaded from Google Sheets");
@@ -160,6 +163,7 @@ async function fetchMembersFromSheet() {
         members = loadFromLocalStorage();
         if (members.length > 0) {
             renderMembers();
+            updateStats();
             members.forEach(m => updateCollections(m.plan, m.admissionFee));
             console.log("✅ Loaded " + members.length + " members from local storage");
         } else {
@@ -182,6 +186,18 @@ function updateCollections(plan, admissionFee) {
 
     monthlyEl.innerText = `₹${currentMonthly + total}`;
     yearlyEl.innerText = `₹${currentYearly + total}`;
+}
+
+// Update member count stats
+function updateStats() {
+    const today = new Date();
+    const expiringSoon = members.filter(m => {
+        const diffDays = Math.ceil((new Date(m.expDate) - today) / (1000 * 60 * 60 * 24));
+        return diffDays <= 15 && diffDays > 0;
+    }).length;
+
+    document.getElementById('memberCount').innerText = members.length;
+    document.getElementById('expiringCount').innerText = expiringSoon;
 }
 
 // Form Submit listener
@@ -287,6 +303,7 @@ async function deleteMember(id) {
         members = members.filter(m => m.id !== id);
         saveToLocalStorage();
         renderMembers();
+        updateStats();
         
         try {
             await fetch(SCRIPT_URL, {
