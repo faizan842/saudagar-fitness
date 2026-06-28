@@ -63,7 +63,7 @@ function compressImage(file, maxSize, quality) {
 let currentPhotoDataUrl = '';
 
 // Function to handle Photo Preview
-document.getElementById('mPhoto').addEventListener('change', async function(e) {
+async function handlePhotoSelect(e) {
     const file = e.target.files[0];
     const preview = document.getElementById('photoPreview');
     
@@ -73,7 +73,11 @@ document.getElementById('mPhoto').addEventListener('change', async function(e) {
         currentPhotoDataUrl = compressed;
         preview.innerHTML = `<img src="${compressed}" class="w-full h-full object-cover">`;
     }
-});
+}
+
+// Bind both camera and gallery inputs to the handler
+document.getElementById('mPhotoCamera').addEventListener('change', handlePhotoSelect);
+document.getElementById('mPhotoGallery').addEventListener('change', handlePhotoSelect);
 
 // Save members to localStorage as backup
 function saveToLocalStorage() {

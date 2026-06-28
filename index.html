@@ -103,31 +103,43 @@
 
         <form id="gymForm" class="p-8 space-y-5">
           <div class="flex flex-col items-center mb-6">
-            <div class="relative group">
-              <div
-                id="photoPreview"
-                class="w-28 h-28 bg-emerald-100 rounded-full border-4 border-white shadow-lg flex items-center justify-center overflow-hidden"
-              >
-                <i class="fas fa-camera text-3xl text-emerald-400"></i>
-              </div>
+            <div
+              id="photoPreview"
+              class="w-28 h-28 bg-emerald-100 rounded-full border-4 border-white shadow-lg flex items-center justify-center overflow-hidden mb-3"
+            >
+              <i class="fas fa-camera text-3xl text-emerald-400"></i>
+            </div>
+            
+            <div class="flex gap-3">
+              <!-- Camera Option -->
               <label
-                for="mPhoto"
-                class="absolute bottom-0 right-0 bg-emerald-600 text-white w-10 h-10 rounded-full flex items-center justify-center cursor-pointer border-4 border-white shadow-md active:scale-90 transition-transform"
+                for="mPhotoCamera"
+                class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer shadow-md active:scale-95 transition-all"
               >
-                <i class="fas fa-plus"></i>
+                <i class="fas fa-camera"></i> Take Photo
                 <input
                   type="file"
-                  id="mPhoto"
+                  id="mPhotoCamera"
+                  accept="image/*"
+                  capture="environment"
+                  class="hidden"
+                />
+              </label>
+              
+              <!-- Gallery Option -->
+              <label
+                for="mPhotoGallery"
+                class="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer border border-emerald-200 active:scale-95 transition-all"
+              >
+                <i class="fas fa-images"></i> Gallery
+                <input
+                  type="file"
+                  id="mPhotoGallery"
                   accept="image/*"
                   class="hidden"
                 />
               </label>
             </div>
-            <p
-              class="text-[10px] font-bold text-emerald-700 mt-2 uppercase tracking-tighter"
-            >
-              Tap plus to add photo
-            </p>
           </div>
           <div class="relative">
             <i class="fas fa-user absolute left-4 top-4 text-emerald-500"></i>
