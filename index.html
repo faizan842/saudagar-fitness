@@ -119,7 +119,6 @@
                   type="file"
                   id="mPhoto"
                   accept="image/*"
-                  capture="environment"
                   class="hidden"
                 />
               </label>
@@ -127,7 +126,7 @@
             <p
               class="text-[10px] font-bold text-emerald-700 mt-2 uppercase tracking-tighter"
             >
-              Tap plus to take photo
+              Tap plus to add photo
             </p>
           </div>
           <div class="relative">
@@ -219,6 +218,19 @@
                 <span>1 Year</span>
               </label>
             </div>
+          </div>
+
+          <!-- Admission Fee Checkbox -->
+          <div class="flex items-center gap-3 p-3 bg-emerald-50 rounded-2xl border border-emerald-100/50">
+            <input 
+              type="checkbox" 
+              id="mAdmissionFee" 
+              value="200" 
+              class="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 border-emerald-300 cursor-pointer"
+            />
+            <label for="mAdmissionFee" class="text-xs font-bold text-emerald-800 cursor-pointer select-none">
+              Include Admission Fee (+₹200)
+            </label>
           </div>
 
           <div class="flex gap-4 pt-4">

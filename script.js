@@ -111,7 +111,7 @@ async function saveMember(data) {
         // Locally add to the list so it shows up immediately
         members.push(data);
         saveToLocalStorage(); // Backup to localStorage
-        updateCollections(data.plan);
+        updateCollections(data.plan, data.admissionFee);
         renderMembers();
         
         alert("✅ Member Saved in Saudagar Fitness Club!");
@@ -124,7 +124,7 @@ async function saveMember(data) {
         // Still save locally even if cloud fails
         members.push(data);
         saveToLocalStorage();
-        updateCollections(data.plan);
+        updateCollections(data.plan, data.admissionFee);
         renderMembers();
         alert("⚠️ Cloud sync failed, but member saved locally!");
         closeModal();
@@ -148,7 +148,7 @@ async function fetchMembersFromSheet() {
         saveToLocalStorage(); // Cache the cloud data locally
         renderMembers();
         // Recalculate totals
-        members.forEach(m => updateCollections(m.plan));
+        members.forEach(m => updateCollections(m.plan, m.admissionFee));
         console.log("✅ Loaded from Google Sheets");
     } catch (e) {
         console.log("Cloud fetch failed, loading from local storage...", e.message);
@@ -156,7 +156,7 @@ async function fetchMembersFromSheet() {
         members = loadFromLocalStorage();
         if (members.length > 0) {
             renderMembers();
-            members.forEach(m => updateCollections(m.plan));
+            members.forEach(m => updateCollections(m.plan, m.admissionFee));
             console.log("✅ Loaded " + members.length + " members from local storage");
         } else {
             console.log("No local data found. Add your first member!");
@@ -165,16 +165,19 @@ async function fetchMembersFromSheet() {
 }
 
 // Update the money collection
-function updateCollections(plan) {
+function updateCollections(plan, admissionFee) {
     let amount = plan == "1" ? 500 : plan == "3" ? 1300 : 4500;
+    let fee = parseInt(admissionFee) || 0;
+    let total = amount + fee;
+    
     const monthlyEl = document.getElementById('monthlyTotal');
     const yearlyEl = document.getElementById('yearlyTotal');
     
     let currentMonthly = parseInt(monthlyEl.innerText.replace('₹', '')) || 0;
     let currentYearly = parseInt(yearlyEl.innerText.replace('₹', '')) || 0;
 
-    monthlyEl.innerText = `₹${currentMonthly + amount}`;
-    yearlyEl.innerText = `₹${currentYearly + amount}`;
+    monthlyEl.innerText = `₹${currentMonthly + total}`;
+    yearlyEl.innerText = `₹${currentYearly + total}`;
 }
 
 // Form Submit listener
@@ -183,6 +186,7 @@ document.getElementById('gymForm').addEventListener('submit', function(e) {
     
     // Use the pre-compressed photo, or a default placeholder
     const photoSrc = currentPhotoDataUrl || 'https://via.placeholder.com/100'; 
+    const admissionChecked = document.getElementById('mAdmissionFee').checked;
     
     const memberData = {
         id: Date.now(),
@@ -193,6 +197,7 @@ document.getElementById('gymForm').addEventListener('submit', function(e) {
         height: document.getElementById('mHeight').value,
         joinDate: document.getElementById('mDate').value,
         plan: document.querySelector('input[name="plan"]:checked').value,
+        admissionFee: admissionChecked ? 200 : 0,
         expDate: calculateExpiry(document.getElementById('mDate').value, document.querySelector('input[name="plan"]:checked').value)
     };
 
