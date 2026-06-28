@@ -1,0 +1,116 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+
+body { font-family: 'Inter', sans-serif; }
+
+.form-input {
+    width: 100%;
+    background: #f8fafc;
+    border: 2px solid #e2e8f0;
+    padding: 1rem;
+    border-radius: 1.25rem;
+    outline: none;
+    transition: all 0.3s;
+}
+
+.form-input:focus {
+    border-color: #059669;
+    background: #fff;
+}
+
+.member-card {
+    background: white;
+    border: 1px solid #ecfdf5;
+    border-radius: 2rem;
+    padding: 1.25rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.nice-input {
+    width: 100%;
+    background: #f0fdf4;
+    border: 2px solid transparent;
+    padding: 1rem;
+    border-radius: 1.25rem;
+    outline: none;
+    font-weight: 600;
+    color: #064e3b;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nice-input:focus {
+    background: #ffffff;
+    border-color: #10b981;
+    box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.1);
+}
+
+.plan-card {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.85rem 0.5rem;
+    background: #f8fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 1rem;
+    cursor: pointer;
+    font-weight: 800;
+    font-size: 0.7rem;
+    color: #64748b;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+.plan-card:has(input:checked) {
+    background: #ecfdf5;
+    border-color: #10b981;
+    color: #059669;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+#memberModal div {
+    scrollbar-width: none;
+}
+#memberModal div::-webkit-scrollbar {
+    display: none;
+}
+
+#photoPreview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+label[for="mPhoto"]:hover {
+    background-color: #059669;
+}
+
+/* Gallery */
+.gallery-item {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: 1rem;
+    overflow: hidden;
+    border: 2px solid #d1fae5;
+    background: #ecfdf5;
+}
+
+.gallery-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(6, 78, 59, 0.85), transparent 60%);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    padding-bottom: 0.5rem;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.gallery-item:active .gallery-overlay,
+.gallery-item:hover .gallery-overlay {
+    opacity: 1;
+}
+
+
+
