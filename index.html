@@ -44,42 +44,42 @@
     </div>
 
     <div id="appContent" class="hidden">
-      <header class="bg-emerald-700 text-white p-6 rounded-b-[40px] shadow-xl">
+      <header class="bg-gradient-to-br from-emerald-800 to-emerald-600 text-white p-6 rounded-b-[48px] shadow-xl shadow-emerald-950/10">
         <div class="flex justify-between items-center mb-6">
           <div>
-            <p class="text-emerald-200 text-xs uppercase tracking-widest">
+            <p class="text-emerald-200 text-xs font-bold uppercase tracking-widest">
               Welcome,
             </p>
-            <h1 class="text-xl font-bold">Saudagar Fitness Club</h1>
+            <h1 class="text-xl font-black tracking-tight">Saudagar Fitness Club</h1>
           </div>
           <button
             onclick="handleLogout()"
-            class="bg-emerald-800/50 px-4 py-2 rounded-xl text-sm"
+            class="bg-white/10 hover:bg-white/20 active:scale-95 transition-all px-4 py-2 rounded-xl text-sm font-semibold border border-white/10"
           >
             Logout <i class="fas fa-sign-out-alt ml-2"></i>
           </button>
         </div>
 
         <div class="grid grid-cols-2 gap-4">
-          <div class="bg-white/10 p-4 rounded-2xl backdrop-blur-md">
-            <p class="text-xs text-emerald-100">Monthly</p>
-            <h2 class="text-2xl font-black" id="monthlyTotal">₹0</h2>
+          <div class="bg-white/10 p-4 rounded-2xl backdrop-blur-md border border-white/10 shadow-inner">
+            <p class="text-xs text-emerald-100 font-bold uppercase tracking-wider">Monthly</p>
+            <h2 class="text-3xl font-black mt-1" id="monthlyTotal">₹0</h2>
           </div>
-          <div class="bg-white/10 p-4 rounded-2xl backdrop-blur-md">
-            <p class="text-xs text-emerald-100">Yearly</p>
-            <h2 class="text-2xl font-black" id="yearlyTotal">₹0</h2>
+          <div class="bg-white/10 p-4 rounded-2xl backdrop-blur-md border border-white/10 shadow-inner">
+            <p class="text-xs text-emerald-100 font-bold uppercase tracking-wider">Yearly</p>
+            <h2 class="text-3xl font-black mt-1" id="yearlyTotal">₹0</h2>
           </div>
         </div>
       </header>
 
-      <main class="p-4">
+      <main class="p-5 max-w-md mx-auto">
         <div class="flex justify-between items-center my-6">
-          <h2 class="text-lg font-bold text-emerald-900">Member Directory</h2>
+          <h2 class="text-lg font-black text-emerald-950 tracking-tight">Member Directory</h2>
           <button
             onclick="openModal()"
-            class="bg-emerald-600 text-white w-12 h-12 rounded-2xl shadow-lg flex items-center justify-center"
+            class="bg-emerald-600 hover:bg-emerald-500 hover:scale-105 active:scale-95 transition-all text-white w-12 h-12 rounded-2xl shadow-lg shadow-emerald-600/25 flex items-center justify-center"
           >
-            <i class="fas fa-plus"></i>
+            <i class="fas fa-plus text-lg"></i>
           </button>
         </div>
 
@@ -87,21 +87,27 @@
       </main>
     </div>
 
+    <!-- Modal Container: now scrolls naturally on small screens -->
     <div
       id="memberModal"
-      class="fixed inset-0 bg-emerald-950/80 hidden z-[110] backdrop-blur-sm p-4 flex items-center justify-center"
+      class="fixed inset-0 bg-emerald-950/60 hidden z-[110] backdrop-blur-md p-4 overflow-y-auto flex justify-center items-start sm:items-center transition-all duration-300"
     >
       <div
-        class="bg-white w-full max-w-lg rounded-[40px] shadow-2xl overflow-hidden border border-emerald-100"
+        class="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl border border-emerald-100/50 my-auto overflow-hidden"
       >
         <div
-          class="bg-emerald-600 p-6 text-white flex justify-between items-center"
+          class="bg-gradient-to-r from-emerald-700 to-emerald-600 p-6 text-white flex justify-between items-center"
         >
-          <h2 class="text-xl font-bold">New Member Details</h2>
-          <i class="fas fa-user-plus text-2xl opacity-50"></i>
+          <div>
+            <h2 class="text-xl font-black tracking-tight">New Member</h2>
+            <p class="text-xs text-emerald-100">Add info to sync with cloud</p>
+          </div>
+          <div class="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/10">
+            <i class="fas fa-user-plus text-lg"></i>
+          </div>
         </div>
 
-        <form id="gymForm" class="p-8 space-y-5">
+        <form id="gymForm" class="p-6 space-y-4">
           <div class="flex flex-col items-center mb-6">
             <div
               id="photoPreview"
@@ -245,17 +251,17 @@
             </label>
           </div>
 
-          <div class="flex gap-4 pt-4">
+          <div class="flex gap-4 pt-2">
             <button
               type="button"
               onclick="closeModal()"
-              class="flex-1 py-4 text-slate-400 font-bold hover:bg-slate-50 rounded-2xl transition-all"
+              class="flex-1 py-4 text-slate-500 hover:text-slate-700 font-bold hover:bg-slate-100/60 rounded-2xl active:scale-95 transition-all text-sm"
             >
               Cancel
             </button>
             <button
               type="submit"
-              class="flex-1 py-4 bg-emerald-600 text-white rounded-2xl font-bold shadow-lg shadow-emerald-200 hover:bg-emerald-700 active:scale-95 transition-all"
+              class="flex-1 py-4 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-2xl font-bold shadow-lg shadow-emerald-600/20 transition-all text-sm"
             >
               Save Member
             </button>

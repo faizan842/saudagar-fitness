@@ -232,22 +232,22 @@ function renderMembers() {
             : `<i class="fas fa-user text-2xl text-emerald-400"></i>`;
 
         container.innerHTML += `
-            <div class="bg-white p-4 rounded-[2rem] shadow-sm border ${isWarning ? 'border-red-200 bg-red-50/30' : 'border-emerald-50'} flex items-center gap-4 animate-in">
+            <div class="member-card flex items-center gap-4 ${isWarning ? 'border-red-200 bg-red-50/30' : 'border-emerald-50'}">
                 <div class="w-16 h-16 rounded-full overflow-hidden border-2 ${isWarning ? 'border-red-500' : 'border-emerald-500'} shadow-sm bg-emerald-100 flex items-center justify-center">
                     ${profileImg}
                 </div>
                 <div class="flex-1">
-                    <h3 class="font-bold text-emerald-900 leading-tight">${m.name}</h3>
+                    <h3 class="font-bold text-emerald-950 leading-tight">${m.name}</h3>
                     <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Plan: ${m.plan} Mo</p>
                     <p class="text-xs ${isWarning ? 'text-red-600 font-bold' : 'text-emerald-600'}">Expires: ${m.expDate}</p>
-                    ${isWarning ? '<span class="text-[9px] bg-red-600 text-white px-2 py-0.5 rounded-full uppercase">15 Days Left</span>' : ''}
+                    ${isWarning ? '<span class="text-[9px] bg-red-600 text-white px-2 py-0.5 rounded-full uppercase font-bold tracking-wider mt-1 inline-block">15 Days Left</span>' : ''}
                 </div>
                 <div class="flex flex-col gap-2">
                     <a href="https://wa.me/${m.phone}?text=Hello ${m.name}, your membership at Saudagar Fitness Club expires on ${m.expDate}. Please renew soon!" 
-                       class="w-10 h-10 bg-emerald-500 text-white rounded-xl flex items-center justify-center shadow-md">
+                       class="w-10 h-10 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl flex items-center justify-center shadow-md active:scale-90 transition-transform">
                         <i class="fab fa-whatsapp"></i>
                     </a>
-                    <button onclick="deleteMember(${m.id})" class="w-10 h-10 bg-red-50 text-red-400 rounded-xl">
+                    <button onclick="deleteMember(${m.id})" class="w-10 h-10 bg-red-50 hover:bg-red-100 text-red-500 rounded-xl active:scale-90 transition-transform">
                         <i class="fas fa-trash-alt text-sm"></i>
                     </button>
                 </div>
