@@ -247,10 +247,22 @@ function renderMembers() {
     });
 }
 
-function deleteMember(id) {
+async function deleteMember(id) {
     if(confirm("Are you sure you want to remove this member?")) {
         members = members.filter(m => m.id !== id);
         saveToLocalStorage();
         renderMembers();
+        
+        try {
+            await fetch(SCRIPT_URL, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "text/plain" },
+                body: JSON.stringify({ action: "delete", id: id })
+            });
+            console.log("Deleted from Cloud successfully");
+        } catch(e) {
+            console.error("Could not delete from Cloud:", e);
+        }
     }
 }
