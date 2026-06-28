@@ -75,6 +75,20 @@ document.getElementById('mPhoto').addEventListener('change', async function(e) {
     }
 });
 
+// Save members to localStorage as backup
+function saveToLocalStorage() {
+    localStorage.setItem('saudagar_members', JSON.stringify(members));
+}
+
+// Load members from localStorage
+function loadFromLocalStorage() {
+    const saved = localStorage.getItem('saudagar_members');
+    if (saved) {
+        try { return JSON.parse(saved); } catch(e) { return []; }
+    }
+    return [];
+}
+
 // SAVE MEMBER (To Google Sheets + Local)
 async function saveMember(data) {
     const saveBtn = document.querySelector('button[type="submit"]');
@@ -86,15 +100,17 @@ async function saveMember(data) {
     saveBtn.style.opacity = "0.7";
 
     try {
+        // Send to Google Sheets (fire-and-forget with no-cors)
         await fetch(SCRIPT_URL, {
             method: "POST",
             mode: "no-cors", 
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "text/plain" },
             body: JSON.stringify(data)
         });
         
         // Locally add to the list so it shows up immediately
         members.push(data);
+        saveToLocalStorage(); // Backup to localStorage
         updateCollections(data.plan);
         renderMembers();
         
@@ -105,7 +121,15 @@ async function saveMember(data) {
         
     } catch (error) {
         console.error("Error saving data:", error);
-        alert("⚠️ Connection Error. Saved on screen only.");
+        // Still save locally even if cloud fails
+        members.push(data);
+        saveToLocalStorage();
+        updateCollections(data.plan);
+        renderMembers();
+        alert("⚠️ Cloud sync failed, but member saved locally!");
+        closeModal();
+        document.getElementById('gymForm').reset();
+        document.getElementById('photoPreview').innerHTML = `<i class="fas fa-camera text-3xl text-emerald-400"></i>`;
     } finally {
         saveBtn.innerText = originalText;
         saveBtn.disabled = false;
@@ -113,18 +137,30 @@ async function saveMember(data) {
     }
 }
 
-// FETCH MEMBERS (To see previously added members)
+// FETCH MEMBERS (From Google Sheets, fallback to localStorage)
 async function fetchMembersFromSheet() {
     console.log("Fetching members...");
     try {
-        const response = await fetch(SCRIPT_URL); // Note: doGet() must be in your Google Script
+        const response = await fetch(SCRIPT_URL);
+        if (!response.ok) throw new Error("HTTP " + response.status);
         const data = await response.json();
         members = data;
+        saveToLocalStorage(); // Cache the cloud data locally
         renderMembers();
         // Recalculate totals
         members.forEach(m => updateCollections(m.plan));
+        console.log("✅ Loaded from Google Sheets");
     } catch (e) {
-        console.log("Initial fetch failed. Add your first member!");
+        console.log("Cloud fetch failed, loading from local storage...", e.message);
+        // Fallback: Load from localStorage
+        members = loadFromLocalStorage();
+        if (members.length > 0) {
+            renderMembers();
+            members.forEach(m => updateCollections(m.plan));
+            console.log("✅ Loaded " + members.length + " members from local storage");
+        } else {
+            console.log("No local data found. Add your first member!");
+        }
     }
 }
 
@@ -214,7 +250,7 @@ function renderMembers() {
 function deleteMember(id) {
     if(confirm("Are you sure you want to remove this member?")) {
         members = members.filter(m => m.id !== id);
+        saveToLocalStorage();
         renderMembers();
-        // Note: Real deletion from Google Sheets requires a 'DELETE' request setup in Apps Script.
     }
 }
