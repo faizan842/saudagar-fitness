@@ -115,7 +115,6 @@ async function saveMember(data) {
         // Locally add to the list so it shows up immediately
         members.push(data);
         saveToLocalStorage(); // Backup to localStorage
-        updateCollections(data.plan, data.admissionFee);
         renderMembers();
         updateStats();
         
@@ -129,7 +128,6 @@ async function saveMember(data) {
         // Still save locally even if cloud fails
         members.push(data);
         saveToLocalStorage();
-        updateCollections(data.plan, data.admissionFee);
         renderMembers();
         updateStats();
         alert("⚠️ Cloud sync failed, but member saved locally!");
@@ -154,8 +152,6 @@ async function fetchMembersFromSheet() {
         saveToLocalStorage(); // Cache the cloud data locally
         renderMembers();
         updateStats();
-        // Recalculate totals
-        members.forEach(m => updateCollections(m.plan, m.admissionFee));
         console.log("✅ Loaded from Google Sheets");
     } catch (e) {
         console.log("Cloud fetch failed, loading from local storage...", e.message);
@@ -164,7 +160,6 @@ async function fetchMembersFromSheet() {
         if (members.length > 0) {
             renderMembers();
             updateStats();
-            members.forEach(m => updateCollections(m.plan, m.admissionFee));
             console.log("✅ Loaded " + members.length + " members from local storage");
         } else {
             console.log("No local data found. Add your first member!");
@@ -172,21 +167,6 @@ async function fetchMembersFromSheet() {
     }
 }
 
-// Update the money collection
-function updateCollections(plan, admissionFee) {
-    let amount = plan == "1" ? 500 : plan == "3" ? 1300 : plan == "6" ? 2500 : 4500;
-    let fee = parseInt(admissionFee) || 0;
-    let total = amount + fee;
-    
-    const monthlyEl = document.getElementById('monthlyTotal');
-    const yearlyEl = document.getElementById('yearlyTotal');
-    
-    let currentMonthly = parseInt(monthlyEl.innerText.replace('₹', '')) || 0;
-    let currentYearly = parseInt(yearlyEl.innerText.replace('₹', '')) || 0;
-
-    monthlyEl.innerText = `₹${currentMonthly + total}`;
-    yearlyEl.innerText = `₹${currentYearly + total}`;
-}
 
 // Update member count stats
 function updateStats() {
