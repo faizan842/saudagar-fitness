@@ -1,5 +1,5 @@
 // 1. CONFIGURATION - Paste your Google Web App URL here
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlUv97inWJyk7VxjlLfW3OW4-S3LKQQEfwrPqwqSA-QEE6rNM9d0YKdAWtBnGm_o8/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwdCKd--1-PmBf0NYz3hKA19wmyjDUq3K06e_zGoBQ8zY600b4wkvg31wSEoJI1cm2hwQ/exec";
 
 // Data Logic
 let members = [];
